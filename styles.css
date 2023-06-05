@@ -1,0 +1,64 @@
+#headerHolder
+{
+    display: flex;
+    flex-direction: row;
+    padding-top: 1em;
+    justify-content: center;
+    text-align: center;
+    margin: 3em;
+}
+
+.graph-container, .map-container{
+    display: flex;
+    margin: 1em;
+}
+
+.dotd {
+    font-size: 15px;
+    margin-left: 5em;
+}
+
+div.tooltip {
+    position: absolute;
+    padding: 7px;
+    font-size: 0.8em;
+    pointer-events: none;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 3px 3px 10px 0px rgba(0, 0, 0, 0.25);
+}
+.axis {
+    font: 10px sans-serif;
+}
+
+.axis path, .axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+}
+
+.buttons-container {
+    display:inline-block;
+    justify-content: center;
+    align-items: center;
+    margin: 1em;
+}
+
+input, button {
+    background-color: transparent;
+    color: black;
+    text-align: center;
+    padding: 14px;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    margin: 4px 6px;
+    cursor: pointer;
+    border: 1px solid;
+    outline: none;
+    border-radius: 6px;
+    font-weight: 100;
+    align-items: center;
+}
+

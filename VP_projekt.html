@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script src="http://d3js.org/topojson.v1.min.js"></script>
+    <link rel="stylesheet" href="./styles.css">
+</head>
+
+<body>
+    <div id="headerHolder">
+        <img id="f1" src="./F1_logo.png" width="200px"></img>
+        <h2>2022 Season Summary</h2>
+    </div>
+    <div class="container">
+        <div class="buttons-container">
+            <button class="All">All</button>
+        </div>
+        <div class="map-container">
+            <div class="map"></div>
+            <div class="dotd"></div>
+        </div>
+        <div class="graph-container">
+            <div class="WDC"></div>
+            <div class="WCC"></div>
+        </div>     
+    </div>
+    
+    <script>
+        //variables
+        var driversData = [];
+        var races = [];
+        var sprints = [];
+        var drivers = [];
+        var teams = [];
+        var dotdData = [];
+        var dotd = [];
+        var raceDriverPoints = [];
+        var raceTeamPoints = [];
+        var racesBtns = [];
+        var clicked = false;
+        var colors = [{"Team": "Red Bull Racing", "Color": "#1E5BC6"},
+                    {"Team": "Ferrari", "Color": "#ED1C24"},
+                    {"Team": "Mercedes", "Color": "#6CD3BF"},
+                    {"Team": "McLaren", "Color": "#F58020"},
+                    {"Team": "Alpine", "Color": "#2293D1"},
+                    {"Team": "Alfa Romeo", "Color": "#B12039"},
+                    {"Team": "Aston Martin", "Color": "#2D826D"},
+                    {"Team": "Haas F1 Team", "Color": "#B6BABD"},
+                    {"Team": "AlphaTauri", "Color": "#4E7C9B"},
+                    {"Team": "Williams", "Color": "#37BEDD"},
+                    {"Team": "Others", "Color": "#ED1C24"}];
+        //map
+        const mapWidth = 700 ;
+        const mapHeight = 400;
+        //bar chart
+        const svgBarChartWidth = 700;
+        const svgBarChartHeight = 400;
+        const margin = {top: 80, rigth: 80, bottom: 120, left: 90};
+        const heightChart = 350-margin.top - margin.bottom;
+        const widthChart = 650 - margin.rigth - margin.left;
+        const barPadding = 4;
+        //pie
+        var pieWidth = 500;
+        var pieHeight = 400;
+        var outerRadius = 80;
+        var innerRadius = 0;
+        var arc = d3.svg.arc()
+                        .innerRadius(innerRadius)
+                        .outerRadius(outerRadius);          
+        d3.json("races.json", function(error,data)
+        {
+            var events = data;
+            //Adding data about events into a buttons array
+            for (var i = 0; i < events.length; i++)
+            {
+                if (events[i].City == "Miami")
+                {
+                    racesBtns.push({"Round": events[i].Round, "Country": "Miami"});
+                }
+                else if (events[i].City == "Imola")
+                {
+                    racesBtns.push({"Round": events[i].Round, "Country": "Emilia Romagna"});
+                }
+                else
+                {
+                    racesBtns.push({"Round": events[i].Round, "Country": events[i].Country});
+                }
+            }
+            // adding countries where races were held into an array
+            var racesCountry = data.map(function(d) { return d.Country;})
+            //drawing world map
+            drawMap(racesCountry, events);
+            //adding buttons and showing data on click
+            var button_holder = d3.select(".buttons-container");    
+            var buttons = button_holder.selectAll("input").data(racesBtns);
+            buttons.enter()
+            .append("input")
+            .attr("type","button")
+            .attr("class","button")
+            .attr("value", function (d){return "Round " + d.Round+ " : " + d.Country; })
+            .on("click", function(d)
+            {
+                clickCountry(d.Country);
+                var id = "#" + d.Country; 
+                if (d.Country == "Emilia Romagna")
+                {
+                    id = "#Italy";
+                }
+                if (d.Country == "Miami" || d.Country == "United States of America")
+                {
+                    id = "#United\\\ States\\\ of\\\ America";
+                }
+                if (d.Country == "Saudi Arabia")
+                {
+                    id = "#Saudi\\\ Arabia";
+                }
+                if (d.Country == "United Kingdom")
+                {
+                    id = "#United\\\ Kingdom";
+                }
+                if (d.Country == "United Arab Emirates")
+                {
+                    id = "#United\\\ Arab\\\ Emirates";
+                }
+                d3.selectAll(".country")
+                            .transition()
+                            .duration(200)
+                            .style("opacity", 0.5)
+                            .style("stroke", "transparent");
+                d3.select(id)
+                    .transition()
+                    .duration(200)
+                    .style("opacity", 1)
+                    .style("stroke", "black")
+                    .style("stroke-width", 0.01);   
+            })
+        })
+        // adding Points2022 to each driver
+        d3.json("F1_2022_drivers.json", function(error,data)
+        {
+            driversData = data;
+            for (var i = 0; i < driversData.length; i++)
+            {
+               driversData[i].Points2022 = 0;
+            }
+        })
+        //calculating total race points for each driver
+        d3.json("F1_2022_Race.json", function(error,data)
+        {
+            races = data;
+            for (var i = 0; i < driversData.length; i++)
+            {
+                for (var j = 0; j < races.length; j++)
+                {
+                    if (races[j].Driver == driversData[i].Driver)
+                    {
+                        driversData[i].Points2022 += races[j].Points;
+                    }
+                }
+            }
+        })
+        d3.json("F1_2022_Sprint.json", function(error,data)
+        {
+            sprints = data;
+            //calculating total points for each driver
+            for (var i = 0; i < driversData.length; i++)
+            {
+                for (var j = 0; j < sprints.length; j++)
+                {
+                    if (sprints[j].Driver == driversData[i].Driver)
+                    {
+                        driversData[i].Points2022 += sprints[j].Points;
+                    }
+                }
+                
+            }
+            //creating an array with drivers points
+            for (var i = 0; i < driversData.length; i++)
+            {
+                drivers.push({"Driver": driversData[i].Driver, "Points": driversData[i].Points2022});
+            }
+            //calculating total teams points and creating an array with teams points
+            for (var i = 0; i < driversData.length; i++)
+            {
+                if (arrayContains(driversData[i].Team, teams))
+                {
+                    for (var j = 0; j < teams.length; j++)
+                    {
+                        if (teams[j].Team == driversData[i].Team)
+                        {
+                            teams[j].Points += driversData[i].Points2022;
+                        }
+                    }
+                }
+                else
+                {
+                    teams.push({"Team": driversData[i].Team, "Points": driversData[i].Points2022});
+                }
+            }
+            //sorting teams and drivers arrays by points
+            sortArray(drivers);
+            sortArray(teams);
+            //drawing bar chart for World Drivers Championship
+            drawBarChart("WDC", "WCC", drivers, "Driver", driversData);
+            //drawing bar chart for World Constructors Championship
+            drawBarChart("WCC", "WDC", teams, "Constructor", teams);
+            //setup of button All - shows total points scored in WDC and WCC and all countries where races haave been held
+            d3.select(".All").on("click", function()
+            {
+                d3.select(".WDC svg").remove();
+                d3.select(".WCC svg").remove();
+                d3.select(".dotd svg").remove();
+                drawBarChart("WDC", "WCC", drivers, "Driver", driversData);
+                drawBarChart("WCC", "WDC", teams, "Constructor", teams);
+                d3.selectAll(".country")
+                        .transition()
+                        .duration(200)
+                        .style("opacity", 1)
+                        .style("stroke", "transparent");
+            })
+        })
+        //Function for drawing world map
+        function drawMap(countries, events)
+        {
+            var projection = d3.geo.mercator()
+                                .scale(90)
+                                .translate([300, 200])
+                                .rotate([-10, 0]);
+            const tooltipMap = d3.select(".map").append("div")
+                                .attr("class", "tooltip")
+                                .style("opacity", 0);
+            var path = d3.geo.path()
+                            .projection(projection);
+            var svgMap = d3.select(".map")
+                        .append("svg")
+                        .attr("width", mapWidth)
+                        .attr("height", mapHeight)
+                        .style("background", "white")
+                        .style("border", 1)       
+            svgMap.append("rect")
+                    .attr("class", "background")
+                    .attr("width", mapWidth)
+                    .attr("height", mapHeight)
+                    .style("stroke", "black")
+                    .style("fill", "none")
+            var g = svgMap.append("g");
+            d3.json("world_map.json", function (error, data) 
+            {
+                var mouseOverMap = function(d)
+                {
+                    for (var i = 0; i < countries.length; i++)
+                    {
+                        var countryName = d.properties.name;
+                        if (countries[i] == countryName)
+                        {
+                            d3.selectAll(".country")
+                                .transition()
+                                .duration(200)
+                                .style("opacity", 0.5)
+                                .style("stroke", "transparent");
+                            d3.select(this)
+                                .transition()
+                                .duration(200)
+                                .style("opacity", 1)
+                                .style("stroke", "black")
+                                .style("stroke-width", 0.01);
+                            tooltipMap.style("left", (d3.mouse(this)[0]) + "px")
+                                .style("top", (d3.mouse(this)[1] + 400) + "px")
+                                .transition()
+                                .duration(400)
+                                .style("opacity", 1)
+                                .text(function()
+                                {
+                                    var text = ""
+                                    var count = 0;
+                                    for (var i = 0; i < countries.length; i++)
+                                    { 
+                                        if (countries[i] == countryName)
+                                        {
+                                            count++;
+                                            if (count > 1)
+                                            {
+                                                text += " || "
+                                            }
+                                            text += "Round: " + events[i].Round + " - " + events[i].GP_Name ;
+                                        }     
+                                    }
+                                    return text;
+                                });
+                        }
+                    }   
+                }
+                var mouseLeaveMap = function()
+                {
+                    d3.selectAll(".country")
+                        .transition()
+                        .duration(200)
+                        .style("opacity", 1)
+                        .style("stroke", "transparent");
+                    tooltipMap.transition().duration(300).style("opacity", 0);
+                }
+                var clickMap = function(d)
+                {
+                    for (var i = 0; i < countries.length; i++)
+                    {
+                        if(countries[i] == d.properties.name)
+                        { 
+                            var countryName = d.properties.name;
+                            clickCountry(countryName);
+                        }
+                    }
+                }
+                var topo = topojson.feature(data, data.objects.countries);
+                var world = g.selectAll("path.country")
+                                .data(topo.features)
+                                .enter()
+                                .append("path")
+                                .attr("class", "country")
+                                .attr("id", function(d) { return d.properties.name; })
+                                .attr("d", path)
+                                .style("fill", function(d)
+                                {
+                                    var color = "gray";
+                                    for (var i = 0; i < countries.length; i++)
+                                    {
+                                        if(countries[i] == d.properties.name)
+                                        { color = "#FF1801";}
+                                    }
+                                    return color;
+                                })
+                                .style("fill-opacity", function(d)
+                                {
+                                    var opacity = 0.5;
+                                    for (var i = 0; i < countries.length; i++)
+                                    {
+                                        if(countries[i] == d.properties.name)
+                                        { opacity = 1;}
+                                    }
+                                    return opacity;
+                                })
+                                .style("stroke", "transperent")
+                                .style("stroke-width", 0.5)
+                                .style("stroke-opacity", 1)
+                                .on("mouseover", mouseOverMap)
+                                .on("mouseleave", mouseLeaveMap)
+                                .on("click", clickMap);
+            });
+        }
+        //function for drawing bar chart
+        function drawBarChart(barClass, otherBarClass, data, key, colorData)
+        {
+            const tooltip = d3.select(`.${barClass}`).append("div")
+                                .attr("class", "tooltip")
+                                .style("opacity", 0);
+            var clickBar = function()
+            {
+                clicked = !clicked;
+                if(clicked)
+                {
+                    d3.selectAll(`.${barClass} rect`)
+                        .transition()
+                        .duration(200)
+                        .style("opacity", 0.2)
+                        .style("stroke", "transparent");
+                    d3.select(this)
+                        .transition()
+                        .duration(200)
+                        .style("opacity", function()
+                        {
+                            d3.selectAll(`.${otherBarClass} rect`).style("opacity", 0.2);
+                            var clickedColor = d3.select(this).attr('fill');
+                            var selectedBars = d3.selectAll(`.${otherBarClass} rect`).filter(function() { return d3.select(this).attr('fill') === clickedColor; });
+                            selectedBars.style("opacity", 1);
+                            return 1;
+                        })
+                        .style("stroke", "black")
+                        .style("stroke-width", 0.01);
+                }
+                else
+                {
+                    d3.selectAll(`.${barClass} rect`)
+                        .transition()
+                        .duration(200)
+                        .style("opacity", 1)
+                        .style("stroke", "transparent");
+                    d3.selectAll(`.${otherBarClass} rect`)
+                        .transition()
+                        .duration(200)
+                        .style("opacity", 1)
+                        .style("stroke", "transparent");
+                }      
+            }
+            var mouseOverBar = function(d)
+            {
+                var leftPosition = 100;
+                if (barClass == "WCC")
+                {
+                    leftPosition = 800;
+                }
+                for (var i = 0; i < data.length; i++)
+                {
+                    d3.selectAll(`.${barClass} rect`)
+                        .transition()
+                        .duration(200)
+                        .style("opacity", 0.2)
+                        .style("stroke", "transparent");
+                    d3.select(this)
+                        .transition()
+                        .duration(200)
+                        .style("opacity", 1)
+                        .style("stroke", "black")
+                        .style("stroke-width", 0.01);
+                    tooltip.style("left", (d3.mouse(this)[0]+leftPosition) + "px")
+                        .style("top", (d3.mouse(this)[1]+800) + "px")
+                        .transition()
+                        .duration(400)
+                        .style("opacity", 1)
+                        .text(d.Points);
+                }            
+            }
+            var mouseLeaveBar = function()
+            {
+                if (!clicked)
+                {
+                    d3.selectAll(`.${barClass} rect`)
+                        .transition()
+                        .duration(200)
+                        .style("opacity", 1)
+                        .style("stroke", "transparent");
+                    tooltip.transition().duration(300).style("opacity", 0);
+                }
+            }
+            var barWidth = widthChart / data.length - barPadding;
+            var x = d3.scale.ordinal()
+                    .domain(data.map(function(d) { return d.Driver || d.Team; }))
+                    .rangeBands([0, widthChart], 0.1);
+            var y = d3.scale.linear()
+                    .domain([0, d3.max(data, function(d){return d.Points;})])
+                    .range([heightChart, 0]);
+            var svgp = d3.select(`.${barClass}`)
+                        .append("svg")
+                        .attr("width", svgBarChartWidth)
+                        .attr("height", svgBarChartHeight)
+                        .style("background-color", "white")
+            var svg = svgp.append("g")
+                        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+            var xAxis = d3.svg.axis()
+                        .scale(x)
+                        .orient("bottom")
+                        .outerTickSize(0)
+                        .innerTickSize(0);
+            var yAxis = d3.svg.axis()
+                        .scale(y)
+                        .orient("left")
+                        .ticks(10);
+            svg.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + heightChart + ")")
+                .call(xAxis)
+                .selectAll("text")
+                .style("text-anchor", "middle")
+                .attr("transform", "translate(-10, 50), rotate(-90)")
+            svg.append("g")
+                .attr("class", "y axis")
+                .call(yAxis)
+                .append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", 6)
+                .attr("dy", ".71em")  
+            var barchart = svg.selectAll("rect")
+                            .data(data)
+                            .enter()
+                            .append("rect")
+                            .attr("x", function(d, i) { return x(d.Driver || d.Team); })
+                            .attr("y", function(d){ return y(d.Points) }) 
+                            .attr("height", function(d) { return heightChart - y(d.Points); })
+                            .attr("width", barWidth)
+                            .attr("fill", function(d){ return colorBars(d.Driver ||d.Team, colorData) })
+                            .on("mouseover", mouseOverBar)
+                            .on("mouseleave", mouseLeaveBar)
+                            .on("click", clickBar);
+            svg.append("text")
+                .attr("x", (widthChart / 2))
+                .attr("y", (heightChart + (margin.bottom / 2) + 30 ))
+                .attr("dy", "1em")
+                .style("text-anchor", "middle")
+                .text(`${key}`);
+            svg.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("x",0 - (heightChart / 2))
+                .attr("y", 10 - margin.left)
+                .attr("dy", "1em")
+                .style("text-anchor", "middle")
+                .text("Points");
+            svgp.append('text')
+                .attr('class', 'title')
+                .attr('x', svgBarChartWidth / 2)
+                .attr('y', margin.top/2)
+                .attr('text-anchor', 'middle')
+                .text(`World ${key}s Championship `);
+        }
+        //function for drawing pie chart
+        function drawPieChart(dotd, dotdData, country)
+        {
+            for (var i = 0; i < dotd.length; i++)
+            {
+                if (dotd[i].Country == country)
+                {
+                    var pie = d3.layout.pie()
+                            .value(function(d) { return d.Value; });
+                    var svgDOTDp = d3.select(`.dotd`)
+                                .append("svg")
+                                .attr("width", pieWidth)
+                                .attr("height", pieHeight)
+                                .style("background-color", "white")
+                    var svgDOTD =  svgDOTDp.append("g")
+                                .attr("transform", "translate(" + 10 + "," + 10 + ")");
+                    var pieArcs = svgDOTD.selectAll("g.pie")
+                                    .data(pie(dotd[i].Data))
+                                    .enter()
+                                    .append("g")
+                                    .attr("class", "pie")
+                                    .attr("transform", "translate(" + (pieWidth / 2) + ", " + (pieHeight / 2) + ")");
+                    pieArcs.append("path")
+                            .attr("fill", function(d, i) {  if (d.data.Driver == "Others") {return "#8080804D";} else { return colorBars(d.data.Driver ,driversData);} })
+                            .attr("d", arc);
+                    pieArcs.append("text")
+                            .attr("transform", function(d) { var c = arc.centroid(d)
+                                                            return "translate(" + c[0]*3.3 +"," + c[1]*3.3 + ") rotate(" + angle(d) + ") "; })
+                            .attr("text-anchor", "middle")
+                            .text(function(d, i) { return d.data.Driver ; });
+                    pieArcs.append("text")
+                            .attr("transform", function(d) { var c = arc.centroid(d); return "translate(" + c[0]*1.5 +"," + c[1]*1.5 + ") "; })
+                            .attr("text-anchor", "middle")
+                            .text(function(d, i) { return d.value + "%" ; })
+                            .style("font-size", "10px");
+                        svgDOTDp.append('text')
+                        .attr('class', 'title')
+                        .attr('x', pieWidth/2)
+                        .attr('y', 10)
+                        .attr('text-anchor', 'middle')
+                        .text(`Driver of the Day `);
+                    function angle(d) {
+                                        var a = (d.startAngle + d.endAngle) * 90 / Math.PI - 90;
+                                        return a > 90 ? a - 180 : a;
+                                        }
+                }
+            }
+        }
+        //function that displays data about the race
+        function clickCountry(country)
+        {
+            d3.json("F1_2022_Race.json", function(error,data)
+            {
+                raceDriverPoints = [];
+                raceTeamPoints = [];
+                d3.select(".WDC svg").remove();
+                d3.select(".WCC svg").remove();
+                races = data;
+                for (var i = 0; i < races.length; i++)
+                {
+                    if(races[i].Track == country)
+                    {
+                        raceDriverPoints.push({"Driver": races[i].Driver, "Points": races[i].Points});
+                        if (arrayContains(races[i].Team, raceTeamPoints))
+                        {
+                            for (var j = 0; j < raceTeamPoints.length; j++)
+                            {
+                                if (raceTeamPoints[j].Team == races[i].Team)
+                                {
+                                    raceTeamPoints[j].Points += races[i].Points;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            raceTeamPoints.push({"Team": races[i].Team, "Points": races[i].Points});
+                        }
+                    }
+                }
+                sortArray(raceDriverPoints);
+                sortArray(raceTeamPoints);
+                drawBarChart("WDC", "WCC", raceDriverPoints, "Driver", driversData);
+                drawBarChart("WCC", "WDC", raceTeamPoints, "Constructor", raceTeamPoints);   
+            }) 
+            d3.json("F1_2022_DOTD.json", function(error,data)
+            { 
+                d3.select(".dotd svg").remove();
+                dotd = [];
+                dotdData = data
+                var others;
+                for (var i = 0; i < dotdData.length; i++)
+                {
+                    others = 100 - dotdData[i].FirstP - dotdData[i].SecondP - dotdData[i].ThirdP - dotdData[i].FourthP - dotdData[i].FifthP;
+                    others = others.toFixed(2);
+                    dotd.push({"Country": dotdData[i].Track, "Data": [{"Driver": dotdData[i].First, "Value": dotdData[i].FirstP},
+                                                                    {"Driver": dotdData[i].Second, "Value": dotdData[i].SecondP},
+                                                                    {"Driver": dotdData[i].Third, "Value": dotdData[i].ThirdP},
+                                                                    {"Driver": dotdData[i].Fourth, "Value": dotdData[i].FourthP},
+                                                                    {"Driver": dotdData[i].Fifth, "Value": dotdData[i].FifthP},
+                                                                    {"Driver": "Others", "Value": others}]})
+                }
+                drawPieChart(dotd, dotdData, country);
+            })
+        }
+        // function that checks if the object is in an array
+        function arrayContains (item, array)
+        {
+            var contains = false;
+            for (var i = 0; i < array.length; i++)
+            {
+                if (array[i].Team == item)
+                {
+                    contains = true;
+                }
+            }
+            return contains;
+        }
+        //function for sorting arrays
+        function sortArray(array)
+        {
+            array.sort(function(x, y)
+            {
+                return d3.descending(x.Points, y.Points);
+            })
+        }
+        //function that returns the color of the bar 
+        function colorBars(cData, data)
+        {
+            for (var i = 0; i < data.length; i++)
+            {
+                if(cData == data[i].Driver || cData == data[i].Team)
+                {
+                    for (var j = 0; j < colors.length; j++)
+                    {
+                        if(data[i].Team == colors[j].Team)
+                        {
+                            return colors[j].Color;
+                        }
+                    }  
+                }
+            }
+        }      
+    </script>  
+</body>
+</html>
