@@ -202,17 +202,17 @@
             sortArray(drivers);
             sortArray(teams);
             //drawing bar chart for World Drivers Championship
-            drawBarChart("WDC", "WCC", drivers, "Driver", driversData);
+            drawBarChart("WDC", "WCC", drivers, "Driver", driversData, "World Drivers Championship");
             //drawing bar chart for World Constructors Championship
-            drawBarChart("WCC", "WDC", teams, "Constructor", teams);
+            drawBarChart("WCC", "WDC", teams, "Constructor", teams, "World Constructors Championship");
             //setup of button All - shows total points scored in WDC and WCC and all countries where races haave been held
             d3.select(".All").on("click", function()
             {
                 d3.select(".WDC svg").remove();
                 d3.select(".WCC svg").remove();
                 d3.select(".dotd svg").remove();
-                drawBarChart("WDC", "WCC", drivers, "Driver", driversData);
-                drawBarChart("WCC", "WDC", teams, "Constructor", teams);
+                drawBarChart("WDC", "WCC", drivers, "Driver", driversData, "World Drivers Championship");
+                drawBarChart("WCC", "WDC", teams, "Constructor", teams, "World Constructors Championship");
                 d3.selectAll(".country")
                         .transition()
                         .duration(200)
@@ -348,7 +348,7 @@
             });
         }
         //function for drawing bar chart
-        function drawBarChart(barClass, otherBarClass, data, key, colorData)
+        function drawBarChart(barClass, otherBarClass, data, key, colorData, graphName)
         {
             const tooltip = d3.select(`.${barClass}`).append("div")
                                 .attr("class", "tooltip")
@@ -498,7 +498,7 @@
                 .attr('x', svgBarChartWidth / 2)
                 .attr('y', margin.top/2)
                 .attr('text-anchor', 'middle')
-                .text(`World ${key}s Championship `);
+                .text(`${graphName}`);
         }
         //function for drawing pie chart
         function drawPieChart(dotd, dotdData, country)
@@ -535,7 +535,7 @@
                             .attr("text-anchor", "middle")
                             .text(function(d, i) { return d.value + "%" ; })
                             .style("font-size", "10px");
-                        svgDOTDp.append('text')
+                    svgDOTDp.append('text')
                         .attr('class', 'title')
                         .attr('x', pieWidth/2)
                         .attr('y', 10)
@@ -581,14 +581,14 @@
                 }
                 sortArray(raceDriverPoints);
                 sortArray(raceTeamPoints);
-                drawBarChart("WDC", "WCC", raceDriverPoints, "Driver", driversData);
-                drawBarChart("WCC", "WDC", raceTeamPoints, "Constructor", raceTeamPoints);   
+                drawBarChart("WDC", "WCC", raceDriverPoints, "Driver", driversData, "Points scored in a race");
+                drawBarChart("WCC", "WDC", raceTeamPoints, "Constructor", raceTeamPoints, "Points scored in a race");   
             }) 
             d3.json("F1_2022_DOTD.json", function(error,data)
             { 
                 d3.select(".dotd svg").remove();
                 dotd = [];
-                dotdData = data
+                dotdData = data 
                 var others;
                 for (var i = 0; i < dotdData.length; i++)
                 {
