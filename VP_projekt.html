@@ -92,6 +92,7 @@
             //drawing world map
             drawMap(racesCountry, events);
             //adding buttons and showing data on click
+            //source: https://github.com/anGie44/F1-races-with-D3
             var button_holder = d3.select(".buttons-container");    
             var buttons = button_holder.selectAll("input").data(racesBtns);
             buttons.enter()
@@ -221,6 +222,7 @@
             })
         })
         //Function for drawing world map
+        //source: https://codepen.io/eliabethvaldez/pen/VwPJOKO
         function drawMap(countries, events)
         {
             var projection = d3.geo.mercator()
@@ -348,6 +350,7 @@
             });
         }
         //function for drawing bar chart
+        //source: https://codepen.io/JKatras/pen/zZbGKB, Priručnik za laboratorijske vježbe iz kolegija Vizualizacija podataka
         function drawBarChart(barClass, otherBarClass, data, key, colorData, graphName)
         {
             const tooltip = d3.select(`.${barClass}`).append("div")
@@ -501,6 +504,7 @@
                 .text(`${graphName}`);
         }
         //function for drawing pie chart
+        //source: Priručnik za laboratorijske vježbe iz kolegija Vizualizacija podataka
         function drawPieChart(dotd, dotdData, country)
         {
             for (var i = 0; i < dotd.length; i++)
@@ -618,6 +622,7 @@
             return contains;
         }
         //function for sorting arrays
+        //source: https://stackoverflow.com/questions/25168086/sorting-objects-based-on-property-value-in-d3
         function sortArray(array)
         {
             array.sort(function(x, y)
